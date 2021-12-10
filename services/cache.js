@@ -43,3 +43,10 @@ mongoose.Query.prototype.exec = async function () {
 
   return result
 }
+
+module.exports = {
+  // To delete data that is nested on a particular hash key.
+  clearHash(hashKey) {
+    client.del(JSON.stringify(hashKey)) // To delete all the information associated with the give keyword
+  },
+}
