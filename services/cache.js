@@ -4,17 +4,29 @@ const util = require('util')
 
 const redisUrl = 'redis://127.0.0.1:6379'
 const client = redis.createClient(redisUrl)
-client.get = util.promisify(client.get)
+client.hget = util.promisify(client.hget)
 const exec = mongoose.Query.prototype.exec // To get a reference to the existing default exec function that is defined on a mongoose query.
 
+mongoose.Query.prototype.cache = function (options = {}) {
+  // We have to use a keyword functio when we need a to create a function and does not use arrow function as we will miss the value of this.
+  this.useCache = true // this equals to the query instance.
+  this.hashKey = JSON.stringify(options.key || '') // As the kay has to be number or string. To Indicate the top level hash key.
+
+  return this // To make sure that this function is chainable one so we can execute in chain in every single query.
+}
+
 mongoose.Query.prototype.exec = async function () {
+  if (!this.useCache === false) {
+    return exec.apply(this, arguments)
+  }
+
   const key = JSON.stringify(
     Object.assign({}, this.getQuery(), {
       collection: this.mongooseCollection.name,
     })
   )
   // See If we have a value for 'key' in redis
-  const cacheValue = await client.get(key)
+  const cacheValue = await client.hget(this.hashKey, key)
 
   // If we do, return that
   if (cacheValue) {
@@ -27,7 +39,7 @@ mongoose.Query.prototype.exec = async function () {
   // Otherwise, Issue that query and store that result in redis.
 
   const result = await exec.apply(this, arguments)
-  client.set(key, JSON.stringify(result))
+  client.hset(this.hashKey, key, JSON.stringify(result), 'EX', 10) //EX refers to expire that mean that the query will cached in redis in just ten seconds.
 
   return result
 }
