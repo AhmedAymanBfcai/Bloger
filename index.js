@@ -18,6 +18,7 @@ const app = express()
 app.use(bodyParser.json())
 app.use(
   cookieSession({
+    // cookieSession is responsible for maintaining a session on incoming request.
     maxAge: 30 * 24 * 60 * 60 * 1000,
     keys: [keys.cookieKey],
   })
@@ -25,7 +26,7 @@ app.use(
 app.use(passport.initialize())
 app.use(passport.session())
 
-require('./routes/authRoutes')(app)
+require('./routes/authRoutes')(app) // To handle authentication in our app. (the entiere google oauth process)
 require('./routes/blogRoutes')(app)
 
 if (['production'].includes(process.env.NODE_ENV)) {
