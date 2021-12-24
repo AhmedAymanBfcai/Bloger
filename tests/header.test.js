@@ -1,5 +1,7 @@
 // https://github.com/puppeteer/puppeteer/blob/v13.0.0/docs/api.md
 const puppeteer = require('puppeteer')
+const sessionFactory = requrie('./factories/sessionFactory')
+const userFactory = requrie('./factories/userFactory')
 
 let browser, page
 // Initial setup for our test environment to apply DRY princple and don't write the same lines of code again before every single test.
@@ -30,4 +32,20 @@ test('clicking login starts oauth flow', async () => {
   const url = await page.url()
 
   expect(url).toMatch(/accounts\.google\.com/) // https://jestjs.io/docs/expect#tomatchregexp--string
+})
+
+// U may run one test in this file by test.only in any of your tests.
+test('When signed in, shows logout button', async () => {
+  // const id = '5a787c3938053859395737fb3c'
+
+  const user = await userFactory() // userFactory returns a promise.
+  const { session, sig } = sessionFactory(user)
+
+  await page.setCookie({ name: 'session', value: session })
+  await page.setCookie({ name: 'session.sig', value: sig })
+  await page.goto('localhost:3000') //If we just set the cookies it's not going to change any of the content on the screen. We have to refresh the page.
+  await page.waitFor('a[href="/auth/logout"]') // puppeteer will wait until it's able to see that elements on the screen. and Then resume execution.
+
+  const text = await page.$eval('a[href="/auth/logout"]', (el) => el.innerHTML)
+  expect(text).toEqual('Logout')
 })
